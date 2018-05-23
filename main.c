@@ -25,7 +25,6 @@ void Load_MT(FILE);
 
 int main(int argc, const char * argv[]) {
     char input[25] = "input.txt";
-    
     char *Line = (char *)malloc(sizeof(char)); 
     transition *tr = (transition *) malloc(sizeof(transition));
     int i;
@@ -44,7 +43,6 @@ int main(int argc, const char * argv[]) {
         fgets(Line, 100, fp);
         
         while(strcmp(Line, "acc\n")){
-    
             tr->init = atoi(*Line);
             tr->in = *(Line + 2);
             tr->out = *(Line + 4);
