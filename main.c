@@ -43,11 +43,11 @@ int main(int argc, const char * argv[]) {
         fgets(Line, 100, fp);
         
         while(strcmp(Line, "acc\n")){
-            tr->init = atoi(*Line);
+            tr->init = *Line;   //da modificare: conversione in int
             tr->in = *(Line + 2);
             tr->out = *(Line + 4);
             tr->head = *(Line + 6);
-            tr->final = atoi(*(Line + 8));
+            tr->final = *(Line + 8);    //da modificare: conversione in int
             printf("%s", Line);
             fgets(Line, 100, fp);
         }
