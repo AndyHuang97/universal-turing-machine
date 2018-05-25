@@ -36,6 +36,7 @@ void createSt(State *);
 
 void init_TM(TM *tm)
 {
+    printf("Initializing the TM ...\n");
     tm->tr = (State *)malloc(sizeof(State));   //creates tm
     tm->Accept = (int *)malloc(sizeof(int));
 }
@@ -46,14 +47,15 @@ void Load_TM(TM *tm, char *filename)           // loading TM from commandline
     char input, output, hmove;
     char *Line = (char *)malloc(sizeof(char));
     
+    printf("Loading the TM from file ...\n");
     fp = fopen(filename, "r");
     if(fp == NULL)
-        printf("Unable to open input file\n");
+        printf("Unable to open input file.\n Loading aborted!");
     else
     {
         printf("Input file: %s\n", filename);
         printf("Success in opening input file!\n");
-        fgets(Line, 100, fp);
+        fgets(Line, 100, fp);       //first line of the file (tr)
         printf("%s", Line);
         
         do
@@ -84,6 +86,7 @@ void Load_TM(TM *tm, char *filename)           // loading TM from commandline
             printf("[%d] Input string: %s\n", i, Line);
         }
     }
+    printf("Loading completed!\n");
 }
 void createSt(State *tr){
     tr->input_next = (inputHash *)malloc(sizeof(inputHash));
