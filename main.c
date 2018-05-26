@@ -73,10 +73,10 @@ int PARENT(int i){
     return i/2;
 }
 int LEFT(int i){
-    return 2*i;
+    return 2*i + 1;
 }
 int RIGHT(int i){
-    return 2*i + 1;
+    return 2*i + 2;
 }
 void MAX_HEAPIFY(array *A, int i, char **line){
     int max;
@@ -85,13 +85,14 @@ void MAX_HEAPIFY(array *A, int i, char **line){
     int l = LEFT(i);
     int r = RIGHT(i);
     
-    if(l <= A->heapSize && A->heapArray[l] > A->heapArray[i])
+    if(l < A->heapSize && A->heapArray[l] > A->heapArray[i])
         max = l;
     else max = i;
-    if(r <= A->heapSize && A->heapArray[r] > A->heapArray[i])
+    if(r < A->heapSize && A->heapArray[r] > A->heapArray[max])
         max = r;
     if( max != i)
     {
+        //printf("A[%d] <-> A[%d]\n\n", i+1, max+1);
         //swap A[i] <-> A[max] ma anche di line
         temp = A->heapArray[i];
         tempLine = line[i];
@@ -100,14 +101,25 @@ void MAX_HEAPIFY(array *A, int i, char **line){
         A->heapArray[max] = temp;
         line[max] = tempLine;
         //end swap.
+        /*  //testing
+        for(i = 0; i < A->heapSize; i++)
+        {
+            printf("%d) %d\t", i+1, A->heapArray[i]);
+            //printf("%i:\t", (unsigned int) Line[i]);
+            printf("%s", line[i]);
+        }
+        printf("\n-------------------\n");
+        //end testing.
+         */
         MAX_HEAPIFY(A, max, line);
     }
+    
 }
-void BUILD_MAX_HEAP(array *A, char** line)
+void BUILD_MAX_HEAP(array *A, char** line)      //Working!
 {
     int i;
     A->heapSize = A->Length;
-    for(i = A->Length/2; i >= 1; i--)
+    for(i = A->Length/2; i >= 0; i--)
         MAX_HEAPIFY(A, i, line);
 }
 void HeapSort1(array *A, char **line)
@@ -116,17 +128,30 @@ void HeapSort1(array *A, char **line)
     char* tempLine;
     int temp;
     BUILD_MAX_HEAP(A, line);
-    for(i = A->Length/2; i >= 0; i--)
+    printf("MAX-HEAP COMPLETED!\n-------------------\n");
+    for(i = A->Length - 1; i >= 1; i--)
     {
+        //swap A[0] <-> A[i]
+        //printf("A[1] <-> A[%d]\n\n", i+1);
         temp = A->heapArray[0];
         tempLine = line[0];
         A->heapArray[0] = A->heapArray[i];
         line[0] = line[i];
         A->heapArray[i] = temp;
         line[i] = tempLine;
+        A->heapSize = A->heapSize - 1;
+        /*  //testing
+        for(i = 0; i < A->heapSize; i++)
+        {
+            printf("%d) %d\t", i+1, A->heapArray[i]);
+            //printf("%i:\t", (unsigned int) Line[i]);
+            printf("%s\n", line[i]);
+        }
+        printf("\nEND SWAP 1\n-------------------\n");
+        */
+        //end swap.
         MAX_HEAPIFY(A, 0, line);
     }
-    
 }
 //HEAPSORT end.
 void sortTr(char *InputFile){
@@ -161,10 +186,10 @@ void sortTr(char *InputFile){
                 fseek(fp1, -1, SEEK_CUR);
         }while(c != 'a');
         
-        A.heapArray = (int *)malloc(states*sizeof(int));  //array of the positions of the lines
+        A.heapArray = (int *) malloc(states*sizeof(int));  //array of the positions of the lines
         A.Length = states;
         A.heapSize = states;
-        heapLine = (char **)malloc(states*sizeof(char *)); //array of associated lines
+        heapLine = (char **) malloc(states*sizeof(char *)); //array of associated lines
         
         fseek(fp1, 3, SEEK_SET);    //salto riga di tr;
         do
@@ -185,8 +210,8 @@ void sortTr(char *InputFile){
         for(i = 0; i < states; i++)
         {
             printf("%d) %d\t", i+1, A.heapArray[i]);
-            printf("%i:\t", (unsigned int) *(heapLine + i));
-            printf("%s\n", *(heapLine + i));
+            //printf("%i:\t", (unsigned int) heapLine[i]);
+            printf("%s", *(heapLine + i));
         }
         printf("\n---------------\n");
         HeapSort1(&A, heapLine);
