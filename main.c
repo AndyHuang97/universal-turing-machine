@@ -68,6 +68,7 @@ void init_TM(TM *tm)
     tm->tr = (State *)malloc(sizeof(State));   //creates tm
     tm->Accept = (int *)malloc(sizeof(int));
 }
+//------------------------------------------------------------
 //HEAPSORT function and support functions
 int PARENT(int i){
     return i/2;
@@ -128,7 +129,7 @@ void HeapSort1(array *A, char **line)
     char* tempLine;
     int temp;
     BUILD_MAX_HEAP(A, line);
-    printf("MAX-HEAP COMPLETED!\n-------------------\n");
+    //printf("MAX-HEAP COMPLETED!\n-------------------\n");
     for(i = A->Length - 1; i >= 1; i--)
     {
         //swap A[0] <-> A[i]
@@ -154,17 +155,19 @@ void HeapSort1(array *A, char **line)
     }
 }
 //HEAPSORT end.
+//------------------------------------------------------------
+//Sorting the transition function
 void sortTr(char *InputFile){
     FILE *fp1, *fp2;
     Heap mheap;
     char outputFile[25] = "tr_sorted.txt";
     char c;
-    int states = 0, i = 0;
+    int states = 0, i = 0, position = 0;
     array A;
     char **heapLine = NULL;
     char *Line = NULL;
     
-    fp1 = fopen("input1.txt", "r");
+    fp1 = fopen(InputFile, "r");
     if(fp1 == NULL)
         printf("Unable to open input file...\n\nLoading aborted!\n\n");
     else
@@ -196,12 +199,16 @@ void sortTr(char *InputFile){
         {
             i++;
             //printf("%d) ", i);
+            
+            //printf("diff: %d\nSEEK_CUR: %d\nSEEK_SET: %d\n", diff, SEEK_CUR, SEEK_SET);
+            position = (int) ftell(fp1);
+            //printf("Offset from SEEK_SET: %d\n", position);
             fscanf(fp1, "%d", &A.heapArray[i-1]);
-            fseek(fp1, -1, SEEK_CUR);
+            fseek(fp1, position, SEEK_SET);
             heapLine[i-1] = (char *)malloc(sizeof(char));
             fgets(heapLine[i-1], 100, fp1);
-            //printf("%d\t", A.heapArray[i-1]);
-            //printf("%s", heapLine[i-1]);
+            printf("%d\t", A.heapArray[i-1]);
+            printf("%s", heapLine[i-1]);
             c = fgetc(fp1);          //first character of the line
             if(c != 'a')
                 fseek(fp1, -1, SEEK_CUR);
@@ -209,17 +216,17 @@ void sortTr(char *InputFile){
         // controllo per vedere se gli stati sono stati memorizzati per bene
         for(i = 0; i < states; i++)
         {
-            printf("%d) %d\t", i+1, A.heapArray[i]);
-            //printf("%i:\t", (unsigned int) heapLine[i]);
-            printf("%s", *(heapLine + i));
+            printf("%d) State:%d\t", i+1, A.heapArray[i]);
+            printf("Transition:%s", *(heapLine + i));
         }
-        printf("\n---------------\n");
+        printf("\n-------------------\n");
         HeapSort1(&A, heapLine);
+        printf("HEAP-SORT COMPLETED!\n-------------------\n");
         // controllo per vedere se gli stati sono stati memorizzati per bene
         for(i = 0; i < states; i++)
         {
-            printf("%d) %d\t", i+1, A.heapArray[i]);
-            printf("%s", heapLine[i]);
+            printf("%d) STATE:%d\t", i+1, A.heapArray[i]);
+            printf("TRANSITION:%s", *(heapLine + i));
         }
     }
     fp2 = fopen(outputFile, "w");
@@ -227,9 +234,15 @@ void sortTr(char *InputFile){
         printf("Unable to open output file...\n\nLoading aborted!\n\n");
     else
     {
-        
+        fprintf(fp2, "tr\n");
+        for(i = 0; i < states; i++)
+        {
+            //fprintf(fp2, "%d ", A.heapArray[i]);
+            fprintf(fp2, "%s", heapLine[i]);
+        }
     }
 }
+//------------------------------------------------------------
 void Load_TM(TM *tm, char *filename)           // loading TM from commandline
 {
     FILE *fp;
