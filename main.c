@@ -118,14 +118,14 @@ void MAX_HEAPIFY(array *A, int i, char **line){
         line[max] = tempLine;
         //end swap.
         /*  //testing
-        for(i = 0; i < A->heapSize; i++)
-        {
-            printf("%d) %d\t", i+1, A->heapArray[i]);
-            //printf("%i:\t", (unsigned int) Line[i]);
-            printf("%s", line[i]);
-        }
-        printf("\n-------------------\n");
-        //end testing.
+         for(i = 0; i < A->heapSize; i++)
+         {
+         printf("%d) %d\t", i+1, A->heapArray[i]);
+         //printf("%i:\t", (unsigned int) Line[i]);
+         printf("%s", line[i]);
+         }
+         printf("\n-------------------\n");
+         //end testing.
          */
         MAX_HEAPIFY(A, max, line);
     }
@@ -157,14 +157,14 @@ void HeapSort1(array *A, char **line)
         line[i] = tempLine;
         A->heapSize = A->heapSize - 1;
         /*  //testing
-        for(i = 0; i < A->heapSize; i++)
-        {
-            printf("%d) %d\t", i+1, A->heapArray[i]);
-            //printf("%i:\t", (unsigned int) Line[i]);
-            printf("%s\n", line[i]);
-        }
-        printf("\nEND SWAP 1\n-------------------\n");
-        */
+         for(i = 0; i < A->heapSize; i++)
+         {
+         printf("%d) %d\t", i+1, A->heapArray[i]);
+         //printf("%i:\t", (unsigned int) Line[i]);
+         printf("%s\n", line[i]);
+         }
+         printf("\nEND SWAP 1\n-------------------\n");
+         */
         //end swap.
         MAX_HEAPIFY(A, 0, line);
     }
@@ -199,8 +199,8 @@ int sortTr(char *InputFile){
             states++;
             //printf("%d) ", states);
             /*
-            fscanf(fp1, "%d %c %c %c %d\n", &mheap.start, &mheap.input, &mheap.output, &mheap.hmove, &mheap.end);
-            //printf("%d %c %c %c %d\n", mheap.start, mheap.input, mheap.output, mheap.hmove, mheap.end);
+             fscanf(fp1, "%d %c %c %c %d\n", &mheap.start, &mheap.input, &mheap.output, &mheap.hmove, &mheap.end);
+             //printf("%d %c %c %c %d\n", mheap.start, mheap.input, mheap.output, mheap.hmove, mheap.end);
              */
             fgets(Line, 100, fp1);
             //printf("%s",Line);
@@ -234,23 +234,23 @@ int sortTr(char *InputFile){
                 fseek(fp1, -1, SEEK_CUR);
         }while(c != 'a');
         /*
-        // controllo per vedere se gli stati sono stati memorizzati per bene
-        for(i = 0; i < states; i++)
-        {
-            printf("%3d) State:%3d\t", i+1, A.heapArray[i]);
-            printf("Transition:%s", *(heapLine + i));
-        }
-        */
+         // controllo per vedere se gli stati sono stati memorizzati per bene
+         for(i = 0; i < states; i++)
+         {
+         printf("%3d) State:%3d\t", i+1, A.heapArray[i]);
+         printf("Transition:%s", *(heapLine + i));
+         }
+         */
         printf("\n-------------------\n");
         HeapSort1(&A, heapLine);
         printf("HEAP-SORT COMPLETED!\n-------------------\n");
         /*
-        // controllo per vedere se gli stati sono stati memorizzati per bene
-        for(i = 0; i < states; i++)
-        {
-            printf("%3d) State:%3d\t", i+1, A.heapArray[i]);
-            printf("Transition:%s", *(heapLine + i));
-        }
+         // controllo per vedere se gli stati sono stati memorizzati per bene
+         for(i = 0; i < states; i++)
+         {
+         printf("%3d) State:%3d\t", i+1, A.heapArray[i]);
+         printf("Transition:%s", *(heapLine + i));
+         }
          */
         fseek(fp1, 3, SEEK_SET);
         int tempstart = -1;
@@ -288,17 +288,17 @@ int sortTr(char *InputFile){
     }
     fclose(fp1);
     /*fp2 = fopen(outputFile, "w");
-    if(fp2 == NULL)
-        printf("Unable to open output file...\n\nLoading aborted!\n\n");
-    else
-    {
-        fprintf(fp2, "tr\n");
-        //fseek(fp1, 3, SEEK_SET);
-        for(i = 0; i < states; i++)
-        {
-            fprintf(fp2, "%s", heapLine[i]);
-        }
-    }
+     if(fp2 == NULL)
+     printf("Unable to open output file...\n\nLoading aborted!\n\n");
+     else
+     {
+     fprintf(fp2, "tr\n");
+     //fseek(fp1, 3, SEEK_SET);
+     for(i = 0; i < states; i++)
+     {
+     fprintf(fp2, "%s", heapLine[i]);
+     }
+     }
      */
     printf("NUMBER OF TRANSITIONS: %d\n", states);
     return count;
@@ -392,12 +392,12 @@ void Load_TM(TM *tm, char *filename)
                     tempInputH->end_next->next->next = NULL;
                 }
             /*
-            while(tm->tr[state-1]->input_next != NULL)
-            {
-                if(tm->tr[state-1]->input_next->next == NULL)
-                    tm->tr[state-1]->input_next->next = tempInputH;
-                tm->tr[state-1]->input_next = tm->tr[state-1]->input_next->next;
-            }
+             while(tm->tr[state-1]->input_next != NULL)
+             {
+             if(tm->tr[state-1]->input_next->next == NULL)
+             tm->tr[state-1]->input_next->next = tempInputH;
+             tm->tr[state-1]->input_next = tm->tr[state-1]->input_next->next;
+             }
              */
             //tm->tr[state-1].input_next->input = input;
             c = fgetc(fp);          //"first character of the line
@@ -417,13 +417,13 @@ void Load_TM(TM *tm, char *filename)
         fscanf(fp, "%s\n", Line);   //"run" line
         //printf("%s\n", Line);
         /*
-        i = 0;
-        while(!feof(fp))
-        {
-            i++;
-            fscanf(fp, "%s\n", Line);   //one input string
-            printf("[%d] Input string: %s\n", i, Line);
-        }
+         i = 0;
+         while(!feof(fp))
+         {
+         i++;
+         fscanf(fp, "%s\n", Line);   //one input string
+         printf("[%d] Input string: %s\n", i, Line);
+         }
          */
         printf("Loading completed!\n\n");
         fclose(fp);
@@ -455,6 +455,9 @@ int main(int argc, char *argv[]) {
         
         return -1;
     }
+    else
+        printf("\nUsage: ./tm < <inputfile> <input to check>\n\n");
+    
     hashDim = sortTr(argv[1]);
     
     init_TM(&tm, hashDim);
@@ -490,5 +493,8 @@ int main(int argc, char *argv[]) {
         start++;
         //i++;
     }
+    
+    printf("N.B.\n\nUsage: ./tm < <inputfile> <input to check> (char)\n\n");
     return 0;
 }
+
