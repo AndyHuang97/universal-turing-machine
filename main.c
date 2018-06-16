@@ -1,17 +1,18 @@
-/*
- Description: Simulator of a Nondeterministic Turing Machine;
- Usage: ./tm <inputfile> <outputfile>
- 
- */
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
-//------------------------------------------------------------
-//TM's data structures
+
+typedef struct CHAR{
+    char key;
+    struct CHAR *next;
+    struct CHAR *prev;
+}CHAR;
+typedef CHAR *STRING;
+
 typedef struct configuration{
     int state;          //state of the OC;
-    char *InStr;        //input string;
-    int pos;            //position of the head on the tape(string);
+    CHAR *InStr;        //input string;
+    CHAR *pos;            //position of the head on the tape(string);
+    struct configuration *next;
 }config;
 typedef struct endList{     //
     char output;    //written char;
@@ -23,11 +24,11 @@ typedef struct inputHash{    //Hashtable for input
     char input;              //read char;
     struct inputHash *next;
     struct inputHash *prev;
-    struct endList *end_next;
+    endList *end_next;
 }inputHash;
 typedef struct State{        //Main hashtable ordered according to states
     int start;                   //start state
-    struct inputHash *input_next;
+    inputHash *input_next;
 }State;
 typedef struct machine{
     State **tr;
@@ -35,284 +36,60 @@ typedef struct machine{
     int *Accept;    //array of final states;
     int max;        //condition for termination if it's looping
 }TM;
-//------------------------------------------------------------
-//sorting data structures
-typedef struct Heap{
-    int start;
-    char input;
-    char output;
-    char hmove;
-    int end;
-}Heap;
-typedef struct array{
-    int *heapArray;
-    int Length;
-    int heapSize;
-}array;
-//------------------------------------------------------------
-/*
- Functions initializations...
- 
- */
-void init_TM(TM *, int);
-int PARENT(int);
-int LEFT(int);
-int RIGHT(int);
-void MAX_HEAPIFY(array *, int, char **);
-void BUILD_MAX_HEAP(array *, char **);
-void HeapSort1(array *, char **);
 
-int sortTr(char *);
+void init_TM(TM *);
+void initInputHash(inputHash **S);
+void createEndList(endList **base, char output, char hmove, int end);
 inputHash *LIST_SEARCH(State *L, char k);
+void LoadTM(TM *);
 void LIST_INSERT(State *L, inputHash *x);
-void Load_TM(TM *, char *);
-void createSt(State *);
+inputHash *INPUT_SEARCH(TM tm, int start, char input);      //solo per controllo
+CHAR *createEL(void);
+CHAR *INSERT_TO_STRING(STRING *, CHAR *);
+STRING LOAD_STRING(void);
+void VisualizeCHAR(CHAR *); //solo per visualizzazione
 
-//------------------------------------------------------------
-//INITIALIZATION functions;
-void initInputHash(inputHash **S){
+void init_TM(TM *tm) {
+    printf("Initializing the TM ...\n\n");
+    tm->tr = (State **)malloc(sizeof(State *));   //array of ptrs to State
+    tm->tr[0] = (State *)malloc(sizeof(State));
+    tm->tr[0]->start = 0;
+    tm->tr[0]->input_next = NULL;
+    tm->Accept = (int *)malloc(sizeof(int));//init list of accepted states
+    tm->snapshot.InStr = NULL;  //no input string loaded
+    tm->snapshot.pos = NULL;
+    tm->snapshot.next = NULL;
+    tm->snapshot.pos = 0;
+    tm->snapshot.state = 0;
+    printf("Initialization complete!\n\n");
+}
+void initInputHash(inputHash **S) {
     *S = (inputHash *)malloc(sizeof(inputHash));
     (*S)->input= 0;
     (*S)->next = NULL;
     (*S)->prev = NULL;
     (*S)->end_next = NULL;
 }
-void init_TM(TM *tm, int hashDim)
-{
-    printf("Initializing the TM ...\n\n");
-    tm->tr = (State **)malloc(hashDim * sizeof(State*));   //creates tm
-    tm->Accept = (int *)malloc(sizeof(int));
+void createEndList(endList **base, char output, char hmove, int end){
+    *base = (endList *) malloc(sizeof(endList));
+    (*base)->output = output;
+    (*base)->hmove = hmove;
+    (*base)->end = end;
+    (*base)->next = NULL;
 }
-//------------------------------------------------------------
-//HEAPSORT function and support functions
-int PARENT(int i){
-    return i/2;
-}
-int LEFT(int i){
-    return 2*i + 1;
-}
-int RIGHT(int i){
-    return 2*i + 2;
-}
-void MAX_HEAPIFY(array *A, int i, char **line){
-    int max;
-    char* tempLine;
-    int temp;
-    int l = LEFT(i);
-    int r = RIGHT(i);
-    
-    if(l < A->heapSize && A->heapArray[l] > A->heapArray[i])
-        max = l;
-    else max = i;
-    if(r < A->heapSize && A->heapArray[r] > A->heapArray[max])
-        max = r;
-    if( max != i)
-    {
-        //printf("A[%d] <-> A[%d]\n\n", i+1, max+1);
-        //swap A[i] <-> A[max] ma anche di line
-        temp = A->heapArray[i];
-        tempLine = line[i];
-        A->heapArray[i] = A->heapArray[max];
-        line[i] = line[max];
-        A->heapArray[max] = temp;
-        line[max] = tempLine;
-        //end swap.
-        /*  //testing
-         for(i = 0; i < A->heapSize; i++)
-         {
-         printf("%d) %d\t", i+1, A->heapArray[i]);
-         //printf("%i:\t", (unsigned int) Line[i]);
-         printf("%s", line[i]);
-         }
-         printf("\n-------------------\n");
-         //end testing.
-         */
-        MAX_HEAPIFY(A, max, line);
-    }
-    
-}
-void BUILD_MAX_HEAP(array *A, char** line)      //Working!
-{
-    int i;
-    A->heapSize = A->Length;
-    for(i = A->Length/2; i >= 0; i--)
-        MAX_HEAPIFY(A, i, line);
-}
-void HeapSort1(array *A, char **line)
-{
-    int i;
-    char* tempLine;
-    int temp;
-    BUILD_MAX_HEAP(A, line);
-    //printf("MAX-HEAP COMPLETED!\n-------------------\n");
-    for(i = A->Length - 1; i >= 1; i--)
-    {
-        //swap A[0] <-> A[i]
-        //printf("A[1] <-> A[%d]\n\n", i+1);
-        temp = A->heapArray[0];
-        tempLine = line[0];
-        A->heapArray[0] = A->heapArray[i];
-        line[0] = line[i];
-        A->heapArray[i] = temp;
-        line[i] = tempLine;
-        A->heapSize = A->heapSize - 1;
-        /*  //testing
-         for(i = 0; i < A->heapSize; i++)
-         {
-         printf("%d) %d\t", i+1, A->heapArray[i]);
-         //printf("%i:\t", (unsigned int) Line[i]);
-         printf("%s\n", line[i]);
-         }
-         printf("\nEND SWAP 1\n-------------------\n");
-         */
-        //end swap.
-        MAX_HEAPIFY(A, 0, line);
-    }
-}
-//HEAPSORT end.
-//------------------------------------------------------------
-//Sorting the transition function
-int sortTr(char *InputFile){
-    FILE *fp1;
-    //FILE *fp2 = NULL;
-    Heap mheap;
-    char c;
-    int states = 0, count = 0, i = 0, position = 0;
-    array A;
-    char **heapLine = NULL;
-    char *Line = NULL;
-    //char outputFile[25] = "tr_sorted.txt";
-    
-    fp1 = fopen(InputFile, "r+");
-    //fp1 = fopen("input2.txt", "r+");
-    if(fp1 == NULL)
-        printf("Unable to open input file...\n\nLoading aborted!\n\n");
-    else
-    {
-        printf("Input file: %s\n", InputFile);
-        printf("Success in opening input file!\n");
-        Line = (char *)malloc(sizeof(char));
-        fgets(Line, 100, fp1);       //first line of the file (tr)
-        //printf("%s", Line);
-        do
-        {
-            states++;
-            //printf("%d) ", states);
-            /*
-             fscanf(fp1, "%d %c %c %c %d\n", &mheap.start, &mheap.input, &mheap.output, &mheap.hmove, &mheap.end);
-             //printf("%d %c %c %c %d\n", mheap.start, mheap.input, mheap.output, mheap.hmove, mheap.end);
-             */
-            fgets(Line, 100, fp1);
-            //printf("%s",Line);
-            c = fgetc(fp1);          //"first character of the line
-            if(c != 'a')
-                fseek(fp1, -1, SEEK_CUR);
-        }while(c != 'a');
-        //printf("\n=========\n");
-        A.heapArray = (int *) malloc(states*sizeof(int));  //array of the positions of the lines
-        A.Length = states;
-        A.heapSize = states;
-        heapLine = (char **) malloc(states*sizeof(char *)); //array of associated lines
-        
-        fseek(fp1, 3, SEEK_SET);    //salto riga di tr;
-        do
-        {
-            i++;
-            //printf("%d) ", i);
-            
-            //printf("diff: %d\nSEEK_CUR: %d\nSEEK_SET: %d\n", diff, SEEK_CUR, SEEK_SET);
-            position = (int) ftell(fp1);
-            //printf("Offset from SEEK_SET: %d\n", position);
-            fscanf(fp1, "%d", &A.heapArray[i-1]);
-            fseek(fp1, position, SEEK_SET);
-            heapLine[i-1] = (char *)malloc(sizeof(char));
-            fgets(heapLine[i-1], 100, fp1);
-            //printf("%d\t", A.heapArray[i-1]);
-            //printf("%s", heapLine[i-1]);
-            c = fgetc(fp1);          //first character of the line
-            if(c != 'a')
-                fseek(fp1, -1, SEEK_CUR);
-        }while(c != 'a');
-        /*
-         // controllo per vedere se gli stati sono stati memorizzati per bene
-         for(i = 0; i < states; i++)
-         {
-         printf("%3d) State:%3d\t", i+1, A.heapArray[i]);
-         printf("Transition:%s", *(heapLine + i));
-         }
-         */
-        printf("\n-------------------\n");
-        HeapSort1(&A, heapLine);
-        printf("HEAP-SORT COMPLETED!\n-------------------\n");
-        /*
-         // controllo per vedere se gli stati sono stati memorizzati per bene
-         for(i = 0; i < states; i++)
-         {
-         printf("%3d) State:%3d\t", i+1, A.heapArray[i]);
-         printf("Transition:%s", *(heapLine + i));
-         }
-         */
-        fseek(fp1, 3, SEEK_SET);
-        int tempstart = -1;
-        do
-        {
-            fscanf(fp1, "%d %c %c %c %d\n", &mheap.start, &mheap.input, &mheap.output, &mheap.hmove, &mheap.end);
-            printf("%d %c %c %c %d\n", mheap.start, mheap.input, mheap.output, mheap.hmove, mheap.end);
-            
-            //checking if the transition is in the same state
-            
-            if(tempstart == -1)//first loop
-            {   //initialize tr[state] and hashInput;
-                tempstart = mheap.start;
-                count++;
-                
-                //initInputHash(&tm->tr[state-1]->input_next);
-            }
-            else
-                if(tempstart != mheap.start)//change state when there is a new one
-                {
-                    count++;
-                    tempstart = mheap.start;
-                }
-            //------------------------------------------------
-            c = fgetc(fp1);          //"first character of the line
-            if(c != 'a')
-                fseek(fp1, -1, SEEK_CUR);
-        }while(c != 'a');
-        printf("NUMBER OF STATES = %d\n", count);
-        fseek(fp1, 3, SEEK_SET);
-        for(i = 0; i < states; i++)//scrittura su file
-        {
-            fprintf(fp1, "%s", heapLine[i]);
-        }
-    }
-    fclose(fp1);
-    /*fp2 = fopen(outputFile, "w");
-     if(fp2 == NULL)
-     printf("Unable to open output file...\n\nLoading aborted!\n\n");
-     else
-     {
-     fprintf(fp2, "tr\n");
-     //fseek(fp1, 3, SEEK_SET);
-     for(i = 0; i < states; i++)
-     {
-     fprintf(fp2, "%s", heapLine[i]);
-     }
-     }
-     */
-    printf("NUMBER OF TRANSITIONS: %d\n", states);
-    return count;
-}
-//------------------------------------------------------------
 //SEARCH...
-inputHash *LIST_SEARCH(State *L, char k){
-    inputHash *x = L->input_next;
-    while(x != NULL && x->input != k)
-        x = x->next;
+inputHash *LIST_SEARCH(State *L, char k) {
+    inputHash *x = NULL;
+    if(L != NULL)
+    {
+        x = L->input_next;
+        while(x != NULL && x->input != k)
+            x = x->next;
+    }
     return x;
 }
 //INSERTION... (to head)
-void LIST_INSERT(State *L, inputHash *x){
+void LIST_INSERT(State *L, inputHash *x) {
     if(L->input_next != NULL)
     {
         x->next = L->input_next;
@@ -321,180 +98,223 @@ void LIST_INSERT(State *L, inputHash *x){
     }
     L->input_next = x;
 }
-//------------------------------------------------------------
-// Loading TM from commandline after sorting the transition function
-void Load_TM(TM *tm, char *filename)
-{
-    FILE *fp;
-    int c, state = 0, tempstart = -1, start;
-    //int i = 0;
-    char input, output, hmove;
-    int end;
-    char *Line = (char *)malloc(sizeof(char));
+
+void LoadTM(TM *tm){
+    char input, output, hmove, c, Line[4];
+    int start, end, states = 0;
+    int i;
     inputHash *tempInputH;
     
-    printf("Loading the TM from file ...\n\n");
-    fp = fopen(filename, "r");
-    //fp = fopen("input2.txt", "r");
-    if(fp == NULL)
-        printf("Unable to open input file...\n\nLoading aborted!\n\n");
-    else
-    {
-        printf("Loading to memory...\n\n");
-        fseek(fp, 3, SEEK_SET);       //first line of the file (tr)
-        printf("%s", Line);
-        do
-        {
-            fscanf(fp, "%d %c %c %c %d\n", &start, &input, &output, &hmove, &end);
-            //printf("%d %c %c %c %d\n", start, input, output, hmove, end);
-            
-            //checking if the transition is in the same state
-            if(tempstart == -1)//first loop
-            {   //initialize tr[state] and hashInput;
-                tempstart = start;
-                state++;
-                tm->tr[state-1] = (State *)malloc(sizeof(State));
-                tm->tr[state-1]->start = start;
-                tm->tr[state-1]->input_next = NULL;
-                //initInputHash(&tm->tr[state-1]->input_next);
-            }
-            else
-                if(tempstart != start)//change state when there is a new one
-                {
-                    state++;
-                    tm->tr[state-1] = (State *)malloc(sizeof(State));
-                    tm->tr[state-1]->start = start;
-                    tm->tr[state-1]->input_next = NULL;
-                    tempstart = start;
-                }
-            //------------------------------------------------------------
-            //checking if the current input is already present in the list
-            tempInputH = LIST_SEARCH(tm->tr[state-1], input);
-            if(tempInputH == NULL)
-            {
-                initInputHash(&tempInputH);
-                tempInputH->input = input;
-                LIST_INSERT(tm->tr[state-1], tempInputH);
-                
-                tm->tr[state-1]->input_next->end_next = (endList *) malloc(sizeof(endList));
-                tm->tr[state-1]->input_next->end_next->output = output;
-                tm->tr[state-1]->input_next->end_next->hmove = hmove;
-                tm->tr[state-1]->input_next->end_next->end = end;
-                tm->tr[state-1]->input_next->end_next->next = NULL;
-            }
-            else
-                if(tempInputH != NULL)
-                {
-                    tempInputH->end_next->next = (endList *) malloc(sizeof(endList));
-                    tempInputH->end_next->next->output = output;
-                    tempInputH->end_next->next->hmove = hmove;
-                    tempInputH->end_next->next->end = end;
-                    tempInputH->end_next->next->next = NULL;
-                }
-            /*
-             while(tm->tr[state-1]->input_next != NULL)
-             {
-             if(tm->tr[state-1]->input_next->next == NULL)
-             tm->tr[state-1]->input_next->next = tempInputH;
-             tm->tr[state-1]->input_next = tm->tr[state-1]->input_next->next;
-             }
-             */
-            //tm->tr[state-1].input_next->input = input;
-            c = fgetc(fp);          //"first character of the line
-            if(c != 'a')
-                fseek(fp, -1, SEEK_CUR);
-        }while(c != 'a');
-        
-        fseek(fp, -1, SEEK_CUR);
-        fscanf(fp, "%s", Line);     //"acc" line
-        //printf("%s\n", Line);
-        fscanf(fp, "%d\n", tm->Accept);     //final state (only one just for now)
-        //printf("%d\n", *tm->Accept);
-        fscanf(fp, "%s\n", Line);     //"max" line
-        //printf("%s\n", Line);
-        fscanf(fp, "%d\n", &tm->max);       //max steps
-        //printf("%d\n", tm->max);
-        fscanf(fp, "%s\n", Line);   //"run" line
-        //printf("%s\n", Line);
-        /*
-         i = 0;
-         while(!feof(fp))
-         {
-         i++;
-         fscanf(fp, "%s\n", Line);   //one input string
-         printf("[%d] Input string: %s\n", i, Line);
-         }
-         */
-        printf("Loading completed!\n\n");
-        fclose(fp);
-        
-    }
+    //while(fgetc(stdin) != '\n'){}   //reads line with string "tr"
+    fscanf(stdin, "%s", Line);
+    //printf("tr\n");
     
+    do
+    {
+        //reads the lines of the transition function
+        //printf("input data: ");
+        fscanf(stdin, "%d %c %c %c %d\n", &start, &input, &output, &hmove, &end);
+        //printf("%d %c %c %c %d\n", start, input, output, hmove, end);
+        
+        if(start > states)
+        {//if start>states then reallocate new memory for it
+            tm->tr = (State **)realloc(tm->tr, (start+2)*sizeof(State *));//realloc start +1 objects.
+            tm->tr[start+1] = NULL;//last object of dynamic array not to be realloced
+            i = start;
+            while(i > states)   //just malloc for the newly added states(cells)
+            {//check from the last cell and allocates new memory for it. It is assumed that the first positions have already their pointers.
+                tm->tr[i] = (State *)malloc(sizeof(State));
+                tm->tr[i]->start = i;
+                tm->tr[i]->input_next = NULL;
+                i -= 1;
+            }
+            states = start;
+        }
+        
+        tempInputH = LIST_SEARCH(tm->tr[start], input);
+        if(tempInputH == NULL)
+        {
+            initInputHash(&tempInputH); //init an inputHash el
+            tempInputH->input = input;
+            LIST_INSERT(tm->tr[start], tempInputH);
+            //finishing one step of the tr function
+            createEndList(&(tm->tr[start]->input_next->end_next), output, hmove, end);
+        }
+        else
+            if(tempInputH != NULL)
+                //finishing one step of the tr function
+                createEndList(&(tempInputH->end_next->next), output, hmove, end);
+        c = getc(stdin);        //used to recognize the "acc" line
+        ungetc(c, stdin);       //puts back the read character
+    }while(c != 'a');
+        printf("Transition part completed!\n");
+    //
+    fscanf(stdin, "%s", Line);     //"acc" line
+    //printf("%s\n", Line);
+    i = 0;                         //using it for accept states array
+    do{
+        fscanf(stdin, "%d\n", &(tm->Accept[i]));     //final state
+        c = getc(stdin);        //used to recognize the "max" line
+        ungetc(c, stdin);       //puts back the read character
+        i++;
+        if(c != 'm')
+            tm->Accept = (int *)realloc(tm->Accept, (i+2)*sizeof(int));
+    }while(c != 'm');
+    
+    /*for(int count = 0; count < i; count++)
+        printf("%d\n", tm->Accept[count]);*/
+    fscanf(stdin, "%s\n", Line);     //"max" line
+    //printf("%s\n", Line);
+    fscanf(stdin, "%d\n", &tm->max);       //max steps
+    //printf("%d\n", tm->max);
+    fscanf(stdin, "%s\n", Line);   //"run" line
+    //printf("%s\n", Line);
 }
-//------------------------------------------------------------
-//SEARCH in TM functions
-//Starting from state "start"(int) and head on "input"(char), find the step of the transition
+//loading input string functions
+CHAR *createEL()
+{
+    CHAR *x = (CHAR *)malloc(sizeof(CHAR));
+    x->key = '_';
+    x->next = NULL;
+    x->prev = NULL;
+    return x;
+}
+CHAR *INSERT_TO_STRING(STRING *string, CHAR *x){
+    (*string)->next = x;
+    return x;//da cambiare
+}
+
+STRING LOAD_STRING(){
+    char c;
+    CHAR *x = NULL, *temp = NULL;
+    STRING string = NULL;
+    int first = 0;
+    
+    c = fgetc(stdin);
+    while(c != '\n' && c != EOF)
+    {
+        if(first == 0)
+        {
+            string = createEL(); //first input char
+            string->key = c;
+            first = 1;
+            temp = string;
+        }
+        else
+        {
+            x = createEL();
+            x->key = c;
+            temp->next = x;
+            x->prev = temp;
+            temp = temp->next;
+        }
+        c = fgetc(stdin);
+    }
+    return string;
+}
+
+void VisualizeCHAR(CHAR *L){
+    CHAR *temp = L;
+    if(L == NULL)
+        printf("NULL\n");
+    while(temp != NULL){
+        printf("%c", temp->key);
+        temp = temp->next;
+    }
+    printf("\n");
+}
+//solo per controllo
 inputHash *INPUT_SEARCH(TM tm, int start, char input) {
     inputHash *x = tm.tr[start]->input_next;
     while(x != NULL && x->input != input)
         x = x->next;
     return x;
 }
-
-int main(int argc, char *argv[]) {
-    int hashDim, start;
-    char input;
-    TM tm;
-    inputHash *tempInput;
-    //State **tempTr;
+config *MKconfig()
+{
+    config *c = (config *)malloc(sizeof(config));
+    c->InStr = NULL;
+    c->next = NULL;
+    c->pos = NULL;
+    c->state = -1;
+    return c;
+}
+void ADDconfig(config **root, config *leaf){
+    config *temp = *root;
+    while(temp != NULL)
+        temp = temp->next;
+    temp->next = leaf;
+}
+void ND_Transition(TM tm)
+{
     
-    if(argc > 3 || argc < 2)
+}
+void ND_Step(config c, TM tm){
+    inputHash *inputH = NULL;
+    config *oneconfig = NULL;
+    endList *choice = NULL;
+    inputH = INPUT_SEARCH(tm, tm.snapshot.state, tm.snapshot.InStr->key);//get the list of steps with input key; can navigate list with 'inputH->end_next->next'
+    if(inputH != NULL)
     {
-        printf("\nWARNING:  Invalid number of arguments!\n\n");
-        printf("Usage: ./tm < <inputfile> <input to check>\n\n");
-        
-        return -1;
+        choice = inputH->end_next;
+        while(choice != NULL)
+        {
+            oneconfig = MKconfig();  //creates a config var to pass to tm at the end;
+            oneconfig->state = choice->end;         //update state
+            oneconfig->pos->key = choice->output;   //overwrite
+            switch (inputH->end_next->hmove) {      //move head;
+                case 'L':
+                    if(oneconfig->pos->prev == NULL)
+                    {
+                        oneconfig->pos->prev = createEL();
+                        oneconfig->pos->prev->next = oneconfig->pos;
+                        oneconfig->InStr = oneconfig->pos->prev;
+                    }
+                    oneconfig->pos = oneconfig->pos->prev;
+                    break;
+                case 'R':
+                    if(oneconfig->pos->next == NULL)
+                    {
+                        oneconfig->pos->next = createEL();
+                        oneconfig->pos->next->prev = oneconfig->pos;
+                    }
+                    oneconfig->pos = oneconfig->pos->next;
+                    break;
+                case 'S'://does nothing
+                    break;
+    
+                default:
+                    printf("Default case: not readable head movement");
+                    break;
+            }
+            //linking different paths as list;
+            
+        }
     }
     else
-        printf("\nUsage: ./tm < <inputfile> <input to check>\n\n");
-    
-    hashDim = sortTr(argv[1]);
-    
-    init_TM(&tm, hashDim);
-    
-    Load_TM(&tm, argv[1]);
-    
-    //checking if the stored data is correct... madness
-    start = 0;
-    int i = 0;
-    input = *argv[2];        //change input to view;
-    while(i < 30 && start < hashDim)
     {
-        tempInput = INPUT_SEARCH(tm, start, input);
-        if(tempInput != NULL)
-        {
-            while(tempInput->end_next != NULL)
-            {
-                printf("%3d) State:%3d |Input: %c\t", i+1, start, input);
-                if(tempInput->end_next != NULL)
-                    printf("Transition:%d %c %c %c %d\n", tm.tr[start]->start, tempInput->input, tempInput->end_next->output, tempInput->end_next->hmove, tempInput->end_next->end);
-                else
-                    printf("Transition1: [BLANK]\n");
-                tempInput->end_next = tempInput->end_next->next;
-                i++;
-            }
-        }
-        else
-        {
-            printf("%3d) State:%3d |Input: %c\t", i+1, start, input);
-            printf("Transition2: [BLANK]\n");
-            i++;
-        }
-        start++;
-        //i++;
+        
     }
+}
+int main(int argc, char *argv[])
+{
+    char c;
+    TM machine;
+    //freopen(argv[7], "r", stdin); //check from lldb
+    init_TM(&machine);
+    LoadTM(&machine);
+    c = fgetc(stdin);
+    ungetc(c, stdin);
+    while(c != EOF)
+    {
+        machine.snapshot.InStr = LOAD_STRING();
     
-    printf("N.B.\n\nUsage: ./tm < <inputfile> <input to check> (char)\n\n");
-    return 0;
+        machine.snapshot.pos = machine.snapshot.InStr;//start:pos points to same addr as InStr
+        VisualizeCHAR(machine.snapshot.InStr);
+        c = fgetc(stdin);
+        ungetc(c, stdin);
+    }
+    if(c == EOF)
+        printf("EOF reached: %d\n", c);
 }
 
