@@ -209,6 +209,8 @@ char *LOAD_STRING(){
         string = (char *)realloc(string, (dim+2)*sizeof(char));
         string[dim] = '_';
         c = getc(stdin);
+        if(c == '\r')
+            c = getc(stdin);
     }
     string[dim+1] = '\0';
     return string;
@@ -313,8 +315,8 @@ config *ND_Step(config **c, TM tm, int *accept){
         choice = inputH->end_next;
         while(choice != NULL) {      //all possible steps on the input
             //printf("BEFORE:\t%s\tS:%d\tH:%d\n", (*c)->String, (*c)->state, (*c)->pos);
-            string = (char *) malloc(strlen((*c)->String)+2);
-            memcpy(string, (*c)->String, strlen((*c)->String)+1);
+            string = (char *) malloc(strlen((*c)->String)+3);
+            memcpy(string, (*c)->String, strlen((*c)->String)+1);//copio la stringa + '\0'
             oneconfig = MKconfig();  //creates a config var to pass to tm at the end;
             
             for(int i = 0; i < tm.numAcc; i++) //checks if it's finale state;
@@ -337,9 +339,9 @@ config *ND_Step(config **c, TM tm, int *accept){
                     break;
                 case 'R':
                     //printf("strlen(oneconfig->String): %lu \n",strlen(oneconfig->String));
-                    if(oneconfig->pos >= strlen(oneconfig->String)-1){
-                        string[strlen(string)] = '_';
+                    if(oneconfig->pos >= strlen(oneconfig->String)-1) {
                         string[strlen(string)+1] = '\0';
+                        string[strlen(string)] = '_';
                     }
                     oneconfig->pos += 1;
                     break;
@@ -386,10 +388,10 @@ config *ND_Step(config **c, TM tm, int *accept){
 /* ---------------------------------------------------------------------- */
 int main(int argc, char *argv[])
 {
-    clock_t tStart = clock();
+    //clock_t tStart = clock();
     char c;
     TM machine;
-    freopen(argv[4], "r", stdin); //check from lldb
+    freopen(argv[8], "r", stdin); //check from lldb
     init_TM(&machine);
     LoadTM(&machine);
     c = fgetc(stdin);   //read character to see if it is EOF
@@ -405,7 +407,7 @@ int main(int argc, char *argv[])
             printf("\n");
         ungetc(c, stdin);
     }
-    printf("\nTime taken: %2fs\n", (double)(clock() - tStart)/CLOCKS_PER_SEC);
+    //printf("\nTime taken: %2fs\n", (double)(clock() - tStart)/CLOCKS_PER_SEC);
     
     return 0;
 }
