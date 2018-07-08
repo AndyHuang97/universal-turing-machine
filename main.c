@@ -42,7 +42,7 @@ void initInputHash(inputHash **);
 endList *createEndList(char, char, int);
 void ENDLIST_INSERT(endList **, endList *);
 inputHash *LIST_SEARCH(State *, char);
-void LoadTM(TM *);
+int LoadTM(TM *);
 void LIST_INSERT(State *, inputHash *);
 inputHash *INPUT_SEARCH(TM , int , char );      //solo per controllo
 
@@ -115,22 +115,21 @@ void LIST_INSERT(State *L, inputHash *x) {
 }
 
 /* ---------------------------------------------------------------------- */
-void LoadTM(TM *tm) {
+int LoadTM(TM *tm) {
     char input, output, hmove, c, Line[4];
     int start, end, states = 0, max = 0;
-    int i;
+    int i, intercept;
     //State **old_addr = tm->tr;
     inputHash *tempInputH;
     endList *new = NULL;
 
-    fscanf(stdin, "%s", Line);
+    intercept = scanf("%s", Line);
     do {
         //reads the lines of the transition function
         //printf("input data: ");
-        fscanf(stdin, "%d %c %c %c %d\n", &start, &input, &output, &hmove, &end);
+        intercept = scanf("%d %c %c %c %d\n", &start, &input, &output, &hmove, &end);
         //printf("%d %c %c %c %d\n", start, input, output, hmove, end);
-        if(max < start || max < end)
-        {
+        if(max < start || max < end) {
             if(start > end)
                 max = start;
             else
@@ -168,11 +167,11 @@ void LoadTM(TM *tm) {
         ungetc(c, stdin);           //puts back the read character
     }while(c != 'a');
     //printf("Transition part completed!\n");
-    fscanf(stdin, "%s", Line);      //"acc" line
+    intercept = scanf("%s", Line);      //"acc" line
     //printf("%s\n", Line);
     i = 0;                          //using it for accept states array
     do {
-        fscanf(stdin, "%d\n", &(tm->Accept[i]));     //final state
+        intercept = scanf("%d\n", &(tm->Accept[i]));     //final state
         c = getc(stdin);            //used to recognize the "max" line
         ungetc(c, stdin);           //puts back the read character
         i++;
@@ -184,12 +183,13 @@ void LoadTM(TM *tm) {
     }while(c != 'm');
     /*for(int count = 0; count < i; count++)
         printf("%d\n", tm->Accept[count]);*/
-    fscanf(stdin, "%s\n", Line);     //"max" line
+    intercept = scanf("%s\n", Line);     //"max" line
     //printf("%s\n", Line);
-    fscanf(stdin, "%d\n", &tm->max);       //max steps
+    intercept = scanf("%d\n", &tm->max);       //max steps
     //printf("%d\n", tm->max);
-    fscanf(stdin, "%s\n", Line);   //"run" line
+    intercept = scanf("%s\n", Line);   //"run" line
     //printf("%s\n", Line);
+    return max;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -322,7 +322,7 @@ config *ND_Step(config **c, TM tm, int *accept){
             for(int i = 0; i < tm.numAcc; i++) //checks if it's finale state;
                 if(choice->end == tm.Accept[i]) {
                     *accept = 1;
-                    return *c;
+                    //return *c;
                 }
             oneconfig->state = choice->end;         //1)update state
             oneconfig->String =  string;
@@ -363,12 +363,15 @@ config *ND_Step(config **c, TM tm, int *accept){
             choice = choice->next;
             //printf("\n");
         }
-        free((*c)->String);
+        free((*c)->String); //freeing head of preceding list;
+        free(*c);
+        *c = root;
         return root;
     }
     else {
         //printf("STRING:\t%s\tS:%d\tH:%d\tDELETED\n\n",(*c)->String,(*c)->state,(*c)->pos);
         free((*c)->String);
+        (*c)->String = NULL;
         if((*c)->prev != NULL) {
             (*c)->prev =  (*c)->next;
             if((*c)->next != NULL)
@@ -388,13 +391,14 @@ config *ND_Step(config **c, TM tm, int *accept){
 /* ---------------------------------------------------------------------- */
 int main(int argc, char *argv[])
 {
-    //clock_t tStart = clock();
+    clock_t tStart = clock();
+    int max;
     char c;
     TM machine;
-    freopen(argv[8], "r", stdin); //check from lldb
+    freopen(argv[3], "r", stdin); //check from lldb
     init_TM(&machine);
-    LoadTM(&machine);
-    c = fgetc(stdin);   //read character to see if it is EOF
+    max = LoadTM(&machine);
+    c = getc(stdin);   //read character to see if it is EOF
     ungetc(c, stdin);   //puts back the read character
     
     while(c != EOF) {
@@ -402,12 +406,20 @@ int main(int argc, char *argv[])
         machine.snapshot->pos = 1;  //strings have this format _"string"_, pos=1;
         ND_Transition(&machine);
      
-        c = fgetc(stdin);           //needed to check the first character of the string
+        c = getc(stdin);           //needed to check the first character of the string
         if(c != EOF)
             printf("\n");
         ungetc(c, stdin);
     }
-    //printf("\nTime taken: %2fs\n", (double)(clock() - tStart)/CLOCKS_PER_SEC);
-    
+    free(machine.Accept);
+    machine.Accept = NULL;
+    /*
+    for(int i = 0; i < max; i++)
+    {
+        free(machine.tr[i]);
+        machine.tr[i] = NULL;
+    }
+     */
+    printf("\nTime taken: %2fs\n", (double)(clock() - tStart)/CLOCKS_PER_SEC);
     return 0;
 }
