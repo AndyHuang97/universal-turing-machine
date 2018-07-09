@@ -33,7 +33,7 @@ typedef struct machine{
     config *snapshot;//memorizes the OC's current state and input string's head
     int *Accept;    //array of final states;
     int numAcc;
-    int max;        //condition for termination if it's looping
+    long max;        //condition for termination if it's looping
 }TM;
 
 /* ---------- Private function declarations ---------- */
@@ -185,7 +185,7 @@ int LoadTM(TM *tm) {
         printf("%d\n", tm->Accept[count]);*/
     intercept = scanf("%s\n", Line);     //"max" line
     //printf("%s\n", Line);
-    intercept = scanf("%d\n", &tm->max);       //max steps
+    intercept = scanf("%li\n", &tm->max);       //max steps
     //printf("%d\n", tm->max);
     intercept = scanf("%s\n", Line);   //"run" line
     //printf("%s\n", Line);
@@ -277,7 +277,7 @@ void ND_Transition(TM *tm){
     config *snapshot = tm->snapshot;
     config *old_addr = NULL, *merge1 = NULL, *merge2 = NULL;
     
-    while (i <= tm->max && !accept && tm->snapshot != NULL) {
+    while (i < tm->max && !accept && tm->snapshot != NULL) {
         snapshot = tm->snapshot;
         old_addr = snapshot->next;
         //printf("%d)\n",i);
@@ -294,7 +294,7 @@ void ND_Transition(TM *tm){
     }
     if(accept)
         printf("1");
-    if(i == tm->max+1)
+    if(i == tm->max)
         printf("U");
     if(tm->snapshot == NULL)
         printf("0");
@@ -315,7 +315,7 @@ config *ND_Step(config **c, TM tm, int *accept){
         choice = inputH->end_next;
         while(choice != NULL) {      //all possible steps on the input
             //printf("BEFORE:\t%s\tS:%d\tH:%d\n", (*c)->String, (*c)->state, (*c)->pos);
-            string = (char *) malloc(strlen((*c)->String)+3);
+            string = (char *) malloc(strlen((*c)->String)+5);
             memcpy(string, (*c)->String, strlen((*c)->String)+1);//copio la stringa + '\0'
             oneconfig = MKconfig();  //creates a config var to pass to tm at the end;
             
@@ -330,18 +330,27 @@ config *ND_Step(config **c, TM tm, int *accept){
             oneconfig->String[oneconfig->pos] = choice->output;   //2)overwrite
             switch (choice->hmove) {      //3)move head
                 case 'L':
+                    if(oneconfig->pos >= strlen(oneconfig->String)-1) {
+                        string[strlen(string)+1] = '\0';
+                        string[strlen(string)] = '_';
+                    }
                     if(oneconfig->pos == 0) {//pos doesn't change, remains 0
-                        memcpy(&string[1], oneconfig->String, strlen(oneconfig->String)+1);//shifts string of one position to the right.
+                        memmove(&string[1], string, strlen(string)+1);//shifts string of one position to the right.
                         string[0] = '_';
                     }
                     else
                         oneconfig->pos -= 1 ;//updates pos of one position to the left
                     break;
                 case 'R':
+                    if(oneconfig->pos == 0) {//pos doesn't change, remains 0
+                        memmove(&string[1], string, strlen(string)+1);//shifts string of one position to the right.
+                        string[0] = '_';
+                        oneconfig->pos += 1;
+                    }
                     //printf("strlen(oneconfig->String): %lu \n",strlen(oneconfig->String));
-                    if(oneconfig->pos >= strlen(oneconfig->String)-1) {
-                        string[strlen(string)+1] = '\0';
+                    if(oneconfig->pos >= strlen(string)-1) {
                         string[strlen(string)] = '_';
+                        string[strlen(string)+1] = '\0';
                     }
                     oneconfig->pos += 1;
                     break;
@@ -391,21 +400,20 @@ config *ND_Step(config **c, TM tm, int *accept){
 /* ---------------------------------------------------------------------- */
 int main(int argc, char *argv[])
 {
-    clock_t tStart = clock();
+    //clock_t tStart = clock();
     int max;
     char c;
     TM machine;
-    freopen(argv[3], "r", stdin); //check from lldb
+    
+    freopen(argv[1], "r", stdin); //check from lldb
     init_TM(&machine);
     max = LoadTM(&machine);
     c = getc(stdin);   //read character to see if it is EOF
     ungetc(c, stdin);   //puts back the read character
-    
     while(c != EOF) {
         machine.snapshot->String = LOAD_STRING();         //load one string
         machine.snapshot->pos = 1;  //strings have this format _"string"_, pos=1;
         ND_Transition(&machine);
-     
         c = getc(stdin);           //needed to check the first character of the string
         if(c != EOF)
             printf("\n");
@@ -413,13 +421,6 @@ int main(int argc, char *argv[])
     }
     free(machine.Accept);
     machine.Accept = NULL;
-    /*
-    for(int i = 0; i < max; i++)
-    {
-        free(machine.tr[i]);
-        machine.tr[i] = NULL;
-    }
-     */
-    printf("\nTime taken: %2fs\n", (double)(clock() - tStart)/CLOCKS_PER_SEC);
+    //printf("\nTime taken: %2fs\n", (double)(clock() - tStart)/CLOCKS_PER_SEC);
     return 0;
 }
