@@ -8,7 +8,6 @@ typedef struct STRING{
     char **tape;    //input string;
     int length;
     int numconfig;   //num of configurations that points to this string
-    //int LEFT;
 }STRING;
 typedef struct configuration{
     int state;          //state of the OC;
@@ -24,9 +23,6 @@ typedef struct endList{     //
     struct endList *next;
 }endList;
 typedef struct inputHash{    //Hashtable for input
-    //char input;              //read char;
-    //struct inputHash *next;
-    //struct inputHash *prev;
     endList *end_next;
 }inputHash;
 typedef struct State{        //Main hashtable ordered according to states
@@ -44,11 +40,15 @@ void init_TM(TM *);
 void initInputHash(inputHash **);
 endList *createEndList(char, char, int);
 void ENDLIST_INSERT(endList **, endList *);
-inputHash *LIST_SEARCH(State *, char);
+endList *ENDLIST_SEARCH(endList *, char, char, int);
 int LoadTM(TM *);
-void LIST_INSERT(State *, inputHash *);
-inputHash *INPUT_SEARCH(TM , int , char );      //solo per controllo
+char *LOAD_STRING(int *);
 config *MKconfig(void);
+void ADDconfig(config *, config *);
+void MergeConfig(config **, config **, config **, config **);
+void FREE_STRING(STRING *);
+void LEFT(config *);
+void RIGHT(config *);
 config *ND_Step(config **, config **, TM, _Bool *, _Bool *);
 char *LOAD_STRING(int *);
 
@@ -199,7 +199,7 @@ int LoadTM(TM *tm) {
 
 /* ---------------------------------------------------------------------- */
 //loading input string functions
-char *LOAD_STRING(int *length){
+char *LOAD_STRING(int *length) {
     int dim = 1, old_dim = 1;
     char *string = (char *)malloc(2*sizeof(char));
     char c;
